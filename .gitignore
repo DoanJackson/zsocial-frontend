@@ -26,3 +26,5 @@ dist-ssr
 # AI Full-Stack Development Assistant Guide
 .agent/*
 .vscode/*
+.env
+.env.production
