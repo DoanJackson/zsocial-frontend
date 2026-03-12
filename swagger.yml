@@ -1,0 +1,1322 @@
+openapi: 3.0.0
+info:
+  title: ZSocial System API
+  description: API documentation for ZSocial Backend (Spring Boot)
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+ 
+  schemas:
+    # ================= ENUMS =================
+    RoleType:
+      type: string
+      enum: [GUEST, ADMIN]
+    GenderType:
+      type: string
+      enum: [MALE, FEMALE, OTHER]
+    UserStatus:
+      type: string
+      enum: [ACTIVE, BANNED]
+    PostStatus:
+      type: string
+      enum: [PUBLIC, ARCHIVED, BANNED]
+    MediaType:
+      type: string
+      enum: [IMAGE, VIDEO]
+    ConversationRole:
+      type: string
+      enum: [MEMBER, ADMIN]
+    ConversationType:
+      type: string
+      enum: [PRIVATE, GROUP]
+    SocketEventType:
+      type: string
+      enum: [NEW_MESSAGE, NEW_MESSAGE_ALERT, USER_TYPING]
+
+    # ================= COMMON =================
+    BaseResponse:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int64
+          example: 200
+        message:
+          type: string
+          example: "Success"
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          nullable: true
+
+    CommonPageResponse:
+      type: object
+      properties:
+        content:
+          type: array
+          items:
+            type: object
+        totalPages:
+          type: integer
+        totalElements:
+          type: integer
+          format: int64
+        size:
+          type: integer
+        page:
+          type: integer
+        empty:
+          type: boolean
+
+    MediaBaseResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        url:
+          type: string
+        type:
+          $ref: '#/components/schemas/MediaType'
+
+    # ================= AUTH & USER DTOs =================
+    UserRegisterRequest:
+      type: object
+      required: [username, password, role]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        role:
+          $ref: '#/components/schemas/RoleType'
+        fullName:
+          type: string
+        gender:
+          $ref: '#/components/schemas/GenderType'
+        dob:
+          type: string
+          format: date-time
+        recaptchaToken:
+          type: string
+
+    UserLoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+        recaptchaToken:
+          type: string
+
+    UserLoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        userId:
+          type: integer
+          format: int64
+        role:
+          $ref: '#/components/schemas/RoleType'
+
+    UserSummaryResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          format: int64
+        username:
+          type: string
+        fullName:
+          type: string
+        avatar:
+          $ref: '#/components/schemas/MediaBaseResponse'
+
+    UserDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        username:
+          type: string
+        email:
+          type: string
+        fullName:
+          type: string
+        gender:
+          $ref: '#/components/schemas/GenderType'
+        dob:
+          type: string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/UserStatus'
+        avatar:
+          $ref: '#/components/schemas/MediaBaseResponse'
+        cover:
+          $ref: '#/components/schemas/MediaBaseResponse'
+        role:
+          $ref: '#/components/schemas/RoleType'
+        followerCount:
+          type: integer
+          format: int64
+        followingCount:
+          type: integer
+          format: int64
+        followingMe:
+          type: boolean
+        followedByMe:
+          type: boolean
+
+    # ================= POST DTOs =================
+    PostResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        content:
+          type: string
+        status:
+          $ref: '#/components/schemas/PostStatus'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        author:
+          $ref: '#/components/schemas/UserSummaryResponse'
+        commentCount:
+          type: integer
+          format: int64
+        medias:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaBaseResponse'
+        isFollowed:
+          type: boolean
+
+    PostsDetailResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        content:
+          type: string
+        author:
+          $ref: '#/components/schemas/UserSummaryResponse'
+        medias:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaBaseResponse'
+        commentCount:
+          type: integer
+          format: int64
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    # ================= CHAT DTOs =================
+    ConversationResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        avatar:
+          type: string
+        groupName:
+          type: string
+        lastMessageContent:
+          type: string
+        lastMessageAt:
+          type: string
+          format: date-time
+        lastMessageSender:
+          $ref: '#/components/schemas/UserSummaryResponse'
+        type:
+          $ref: '#/components/schemas/ConversationType'
+        isGroup:
+          type: boolean
+
+    MemberResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummaryResponse'
+        role:
+          $ref: '#/components/schemas/ConversationRole'
+
+    ConversationMembersResponse:
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/MemberResponse'
+        numOfMem:
+          type: integer
+          format: int64
+
+    SocketResponse:
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/SocketEventType'
+        payload:
+          type: object
+          nullable: true
+
+    MessageResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        conversationId:
+          type: integer
+          format: int64
+        content:
+          type: string
+        sender:
+          $ref: '#/components/schemas/UserSummaryResponse'
+        medias:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaBaseResponse'
+        createdAt:
+          type: string
+          format: date-time
+
+    MessageSocketResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        conversationId:
+          type: integer
+          format: int64
+        content:
+          type: string
+        sender:
+          $ref: '#/components/schemas/UserSummaryResponse'
+        medias:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaBaseResponse'
+        createdAt:
+          type: string
+          format: date-time
+        groupName:
+          type: string
+        avatar:
+          type: string
+        type:
+          $ref: '#/components/schemas/ConversationType'
+        isGroup:
+          type: boolean
+
+    # ================= COMMENT DTOs =================
+    CommentBaseResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        postId:
+          type: integer
+          format: int64
+        parentCommentId:
+          type: integer
+          format: int64
+          nullable: true
+        author:
+          $ref: '#/components/schemas/UserSummaryResponse'
+        content:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        medias:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaBaseResponse'
+        childCommentCount:
+          type: integer
+          format: int64
+
+tags:
+  - name: SSO
+    description: Single Sign-On endpoints
+  - name: User
+    description: User management endpoints
+  - name: Social
+    description: Follow/Unfollow endpoints
+  - name: Posts
+    description: Posts management endpoints
+  - name: Chat
+    description: Chat and Conversation endpoints
+  - name: Comment
+    description: Comment management endpoints
+
+paths:
+  # ================= SSO =================
+  /api/sso/register:
+    post:
+      tags: [SSO]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegisterRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /api/sso/login:
+    post:
+      tags: [SSO]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserLoginRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/UserLoginResponse'
+
+  /api/sso/google:
+    post:
+      tags: [SSO]
+      summary: Login with Google
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/UserLoginResponse'
+
+  # ================= User =================
+  /api/users/search:
+    get:
+      tags: [User]
+      summary: Search users
+      parameters:
+        - in: query
+          name: keyword
+          required: true
+          schema:
+            type: string
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 4
+        - in: query
+          name: sortField
+          schema:
+            type: string
+            default: id
+        - in: query
+          name: sortDirection
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: ASC
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/CommonPageResponse'
+                          - properties:
+                              content:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/UserDetailResponse'
+
+  /api/users/me:
+    get:
+      tags: [User]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/UserDetailResponse'
+
+  /api/users/{userId}:
+    get:
+      tags: [User]
+      summary: Get user profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/UserDetailResponse'
+
+  /api/users/me/avatar:
+    patch:
+      tags: [User]
+      summary: Update avatar
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The image file to upload
+                required:
+                  - file
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/MediaBaseResponse'
+
+  /api/users/me/cover:
+    patch:
+      tags: [User]
+      summary: Update cover
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: The image file to upload
+                required:
+                  - file
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/MediaBaseResponse'
+
+  # ================= Social =================
+  /api/users/{targetUserId}/follow:
+    post:
+      tags: [Social]
+      summary: Follow a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: targetUserId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /api/users/{targetUserId}/unfollow:
+    delete:
+      tags: [Social]
+      summary: Unfollow a user
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: targetUserId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  # ================= Posts =================
+  /api/posts:
+    post:
+      tags: [Posts]
+      summary: Create a new post
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [content, status]
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/PostStatus'
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /api/posts/feeds/friends:
+    get:
+      tags: [Posts]
+      summary: Get friends' posts (Cursor pagination)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: size
+          schema:
+            type: integer
+            format: int64
+            default: 4
+        - in: query
+          name: lastPostId
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PostResponse'
+                          nextCursor:
+                            type: string
+                          hasNext:
+                            type: boolean
+
+  /api/posts/feeds/suggested:
+    get:
+      tags: [Posts]
+      summary: Get suggested posts (Cursor pagination)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: size
+          schema:
+            type: integer
+            format: int64
+            default: 4
+        - in: query
+          name: lastPostId
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PostResponse'
+                          nextCursor:
+                            type: string
+                          hasNext:
+                            type: boolean
+
+  /api/posts/search:
+    get:
+      tags: [Posts]
+      summary: Search posts
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: keyword
+          schema:
+            type: string
+        - in: query
+          name: fromDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: toDate
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: size
+          schema:
+            type: integer
+                - in: query
+        - in: query
+          name: lastPostId
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PostResponse'
+                          nextCursor:
+                            type: string
+                          hasNext:
+                            type: boolean
+
+  /api/posts/users/{userId}:
+    get:
+      tags: [Posts]
+      summary: Get posts by user ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 4
+        - in: query
+          name: sortField
+          schema:
+            type: string
+            default: id
+        - in: query
+          name: sortDirection
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: DESC
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/PostResponse'
+                          totalPages:
+                            type: integer
+                          totalElements:
+                            type: integer
+                            format: int64
+                          size:
+                            type: integer
+                          page:
+                            type: integer
+                          empty:
+                            type: boolean
+
+  /api/posts/{postId}:
+    get:
+      tags: [Posts]
+      summary: Get post detail
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/PostsDetailResponse'
+    patch:
+      tags: [Posts]
+      summary: Update post
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                content:
+                  type: string
+                status:
+                  $ref: '#/components/schemas/PostStatus'
+                keptMediaIds:
+                  type: array
+                  items:
+                    type: integer
+                    format: int64
+                newFiles:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+    delete:
+      tags: [Posts]
+      summary: Delete post
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  # ================= Chat =================
+  /api/chat:
+    post:
+      tags: [Chat]
+      summary: Send a message
+      description: Maps to ChatController sendMessage.
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                conversationId:
+                  type: integer
+                  format: int64
+                receiverId:
+                  type: integer
+                  format: int64
+                content:
+                  type: string
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/MessageResponse'
+
+  /api/chat/conversations:
+    get:
+      tags: [Chat]
+      summary: Get list of conversations
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: nextCursor
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/ConversationResponse'
+                          nextCursor:
+                            type: string
+                          hasNext:
+                            type: boolean
+
+  /api/chat/conversations/{conversationId}/members:
+    get:
+      tags: [Chat]
+      summary: Get members of a conversation
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        $ref: '#/components/schemas/ConversationMembersResponse'
+
+  /api/chat/conversations/{conversationId}/messages:
+    get:
+      tags: [Chat]
+      summary: Get messages in a conversation
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: conversationId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: lastMessageId
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/MessageResponse'
+                          nextCursor:
+                            type: string
+                          hasNext:
+                            type: boolean
+
+  # ================= Comment =================
+  /api/posts/{postId}/comments:
+    post:
+      tags: [Comment]
+      summary: Create a new comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                parentId:
+                  type: integer
+                  format: int64
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: Created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+    get:
+      tags: [Comment]
+      summary: Get comments by Post ID
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: sortField
+          schema:
+            type: string
+            default: id
+        - in: query
+          name: sortDirection
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: ASC
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/CommentBaseResponse'
+                          totalPages:
+                            type: integer
+                          totalElements:
+                            type: integer
+                            format: int64
+                          size:
+                            type: integer
+                          page:
+                            type: integer
+                          empty:
+                            type: boolean
+
+  /api/comments/{commentId}:
+    patch:
+      tags: [Comment]
+      summary: Update a comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                keptMediaIds:
+                  type: array
+                  items:
+                    type: integer
+                    format: int64
+                newFiles:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+    delete:
+      tags: [Comment]
+      summary: Delete a comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+
+  /api/comments/{commentId}/replies:
+    get:
+      tags: [Comment]
+      summary: Get replies of a comment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+        - in: query
+          name: sortField
+          schema:
+            type: string
+            default: id
+        - in: query
+          name: sortDirection
+          schema:
+            type: string
+            enum: [ASC, DESC]
+            default: ASC
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/CommentBaseResponse'
+                          totalPages:
+                            type: integer
+                          totalElements:
+                            type: integer
+                            format: int64
+                          size:
+                            type: integer
+                          page:
+                            type: integer
+                          empty:
+                            type: boolean
