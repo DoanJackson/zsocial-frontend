@@ -1,10 +1,30 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import authService from '../../services/authService';
-import { useAuth } from '../../contexts/AuthContext';
+import authService from '@/services/authService';
+import { useAuth } from '@/contexts/AuthContext';
+import RegisterHeader from '@/components/Register/RegisterHeader';
+import RegisterFooter from '@/components/Register/RegisterFooter';
+import LoginForm from '@/components/Login/LoginForm';
+
+/* ─── Stitch Design Tokens (from tailwind.config in Stitch HTML) ─── */
+// primary:            #2962FF
+// primary-container:  #809bff
+// primary-dim:        #0041c7
+// on-primary:         #f2f1ff
+// on-surface:         #2a2b51
+// on-surface-variant: #575881
+// surface-container-lowest: #ffffff
+// surface-container-low:    #f2efff
+// surface-container-high:   #e1e0ff
+// background:         #f8f5ff
+// outline:            #72739e
+// secondary-container:#26e6ff
+// secondary:          #006571
+// tertiary:           #b60051
 
 function Login() {
+    // ─── Business Logic (preserved 1:1 from original) ───────────────
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const navigate = useNavigate();
@@ -12,15 +32,11 @@ function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
         try {
             const response = await authService.login(username, password);
-
             if (response.success) {
                 const { token, userId, role, avatar, fullName } = response.data;
-                // Lưu vào AuthContext (sẽ đồng bộ localStorage bên trong)
                 login({ token, userId, role, avatar, fullName });
-
                 toast.success('Đăng nhập thành công!');
                 navigate('/feed');
             } else {
@@ -33,46 +49,41 @@ function Login() {
     };
 
     return (
-        <div className="flex justify-center items-center min-h-screen bg-[#f0f2f5] p-4 font-['Inter',system-ui,Avenir,Helvetica,Arial,sans-serif]">
-            <div className="flex flex-col items-center w-full max-w-[400px] gap-6">
-                <Link
-                    to="/"
-                    className="text-3xl font-bold text-[#1877f2] no-underline hover:drop-shadow-[0_0_2em_#646cffaa] transition-all cursor-pointer"
-                >
-                    ZSocial
-                </Link>
-                <div className="bg-white p-10 rounded-lg shadow-[0_2px_4px_rgba(0,0,0,0.1),0_8px_16px_rgba(0,0,0,0.1)] w-full text-left">
-                    <h2 className="text-center mb-8 text-[#1877f2] mt-0 text-2xl font-bold">Đăng nhập</h2>
-                    <form onSubmit={handleSubmit}>
-                        <div className="flex flex-col gap-2 mb-4">
-                            <label className="font-medium text-[0.9rem] text-[#333]">Tên đăng nhập</label>
-                            <input
-                                type="text"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Nhập tên đăng nhập"
-                                className="p-3 border border-[#ddd] rounded-md text-base transition-colors bg-white text-[#333] w-full box-border focus:outline-none focus:border-[#1877f2] focus:ring-2 focus:ring-[#1877f2]/20"
-                                required
-                            />
-                        </div>
-                        <div className="flex flex-col gap-2 mb-4">
-                            <label className="font-medium text-[0.9rem] text-[#333]">Mật khẩu</label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="Nhập mật khẩu"
-                                className="p-3 border border-[#ddd] rounded-md text-base transition-colors bg-white text-[#333] w-full box-border focus:outline-none focus:border-[#1877f2] focus:ring-2 focus:ring-[#1877f2]/20"
-                                required
-                            />
-                        </div>
-                        <button type="submit" className="w-full p-3 bg-[#1877f2] text-white border-none rounded-md text-base font-semibold cursor-pointer transition-colors mt-4 hover:bg-[#166fe5]">Đăng nhập</button>
-                    </form>
-                    <p className="mt-6 text-center text-[0.9rem] text-[#666]">
-                        Chưa có tài khoản? <Link to="/register" className="text-[#1877f2] no-underline font-medium ml-1 hover:underline">Đăng ký ngay</Link>
-                    </p>
-                </div>
-            </div>
+        /* ─── <body> equivalent ─────────────────────────────────────────
+           bg-background = #f8f5ff | font-body = Be Vietnam Pro          */
+        <div
+            className="bg-[#f8f5ff] min-h-screen flex flex-col"
+            style={{ fontFamily: "'Be Vietnam Pro', sans-serif", color: '#2a2b51' }}
+        >
+            {/* ── Google Fonts (same as Stitch <head>) ─── */}
+            <style>{`
+                @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@300;400;500;600;700&display=swap');
+                @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+                .material-symbols-outlined {
+                    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+                }
+                .editorial-gradient {
+                    background: linear-gradient(135deg, #2962FF 0%, #809bff 100%);
+                }
+                .tonal-shadow {
+                    box-shadow: 0 32px 64px -12px rgba(42, 43, 81, 0.06);
+                }
+            `}</style>
+
+            {/* ── <header> ── fixed top nav ──────────────────────────────── */}
+            <RegisterHeader />
+
+            {/* ── <main> ── centered form ────────────────────────────────── */}
+            <LoginForm 
+                username={username}
+                setUsername={setUsername}
+                password={password}
+                setPassword={setPassword}
+                onSubmit={handleSubmit}
+            />
+
+            {/* ── <footer> ───────────────────────────────────────────────── */}
+            <RegisterFooter />
         </div>
     );
 }

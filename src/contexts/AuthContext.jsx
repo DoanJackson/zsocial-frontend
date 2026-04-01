@@ -1,66 +1,41 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
-import socketService from '../services/socketService';
-import { TOPIC_USER_PREFIX, SOCKET_EVENT } from '../constants/socketConfig';
+import { useStompClient } from '@/hooks/useStompClient';
+import { TOPIC_USER_PREFIX, SOCKET_EVENT } from '@/constants/socketConfig';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const { connect, disconnect, subscribe } = useStompClient();
 
     // Set of listener functions that want to be notified of NEW_MESSAGE_ALERT
     // Using a ref so it's stable across renders and avoids stale closures
     const alertListenersRef = useRef(new Set());
-    const userChannelSubRef = useRef(null);
 
-    /**
-     * Subscribe to /topic/user.{userId} and broadcast NEW_MESSAGE_ALERT to all registered listeners.
-     */
-    const subscribeUserChannel = useCallback((userId) => {
-        const destination = `${TOPIC_USER_PREFIX}${userId}`;
+    // Subscribe to the global user channel when 'user' state changes
+    useEffect(() => {
+        if (!user?.userId) return;
 
-        const doSubscribe = () => {
-            const sub = socketService.subscribe(destination, (stompMsg) => {
-                try {
-                    const socketResp = JSON.parse(stompMsg.body);
-                    if (socketResp.type !== SOCKET_EVENT.NEW_MESSAGE_ALERT) return;
-                    const msgAlert = socketResp.payload;
-                    // Broadcast to every registered listener
-                    alertListenersRef.current.forEach(fn => fn(msgAlert));
-                } catch (err) {
-                    console.error('[AuthContext] Failed to handle NEW_MESSAGE_ALERT', err);
-                }
-            });
-            if (sub) {
-                userChannelSubRef.current = sub;
+        const destination = `${TOPIC_USER_PREFIX}${user.userId}`;
+
+        const unsubscribe = subscribe(destination, (stompMsg) => {
+            try {
+                const socketResp = JSON.parse(stompMsg.body);
+                if (socketResp.type !== SOCKET_EVENT.NEW_MESSAGE_ALERT) return;
+                const msgAlert = socketResp.payload;
+                // Broadcast to every registered listener
+                alertListenersRef.current.forEach(fn => fn(msgAlert));
+            } catch (err) {
+                console.error('[AuthContext] Failed to handle NEW_MESSAGE_ALERT', err);
             }
-            return sub;
+        });
+
+        // Cleanup function reliably removes the subscription when user logs out or unmounts
+        return () => {
+            if (unsubscribe) unsubscribe();
         };
-
-        const sub = doSubscribe();
-        // Retry once after 1.5s if STOMP wasn't ready yet
-        if (!sub) {
-            const timer = setTimeout(() => {
-                if (!userChannelSubRef.current) doSubscribe();
-            }, 1500);
-            // Store timer id so we can clear it on logout (best-effort)
-            userChannelSubRef._retryTimer = timer;
-        }
-    }, []);
-
-    /**
-     * Unsubscribe user channel (called on logout).
-     */
-    const unsubscribeUserChannel = useCallback(() => {
-        if (userChannelSubRef._retryTimer) {
-            clearTimeout(userChannelSubRef._retryTimer);
-            userChannelSubRef._retryTimer = null;
-        }
-        if (userChannelSubRef.current) {
-            socketService.unsubscribe(userChannelSubRef.current);
-            userChannelSubRef.current = null;
-        }
-    }, []);
+    }, [user?.userId, subscribe]);
 
     // Khôi phục trạng thái đăng nhập từ localStorage khi app khởi động
     useEffect(() => {
@@ -72,18 +47,14 @@ export const AuthProvider = ({ children }) => {
 
         if (token) {
             setUser({ token, userId, role, avatar, fullName });
-            // Tái lập kết nối WebSocket nếu đã đăng nhập trước đó
-            socketService.connect(userId, token);
-            // Subscribe kênh user ngay sau khi reconnect (retry built in)
-            // Dùng timeout nhỏ vì STOMP cần chút thời gian để kết nối lại
-            setTimeout(() => subscribeUserChannel(userId), 500);
+            connect(token);
         }
         setLoading(false);
 
         return () => {
-            socketService.disconnect();
+            disconnect();
         };
-    }, [subscribeUserChannel]);
+    }, [connect, disconnect]);
 
     /**
      * Gọi sau khi đăng nhập thành công.
@@ -97,18 +68,14 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem('avatar', avatar || '');
         localStorage.setItem('fullName', fullName || '');
         setUser({ token, userId, role, avatar, fullName });
-        // Kết nối WebSocket sau khi đăng nhập thành công
-        socketService.connect(userId, token);
-        // Subscribe kênh user — STOMP vừa kết nối nên cần delay nhỏ
-        setTimeout(() => subscribeUserChannel(userId), 500);
+        connect(token);
     };
 
     /**
      * Đăng xuất — xóa toàn bộ thông tin user.
      */
     const logout = () => {
-        unsubscribeUserChannel();
-        socketService.disconnect();
+        disconnect();
         localStorage.removeItem('token');
         localStorage.removeItem('userId');
         localStorage.removeItem('role');

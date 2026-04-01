@@ -1,5 +1,5 @@
 export function getUserAvatarUrl() {
-    const avatarUrl = localStorage.getItem('avatarUrl');
+    const avatarUrl = localStorage.getItem('avatar');
     return avatarUrl || '/assets/default-avatar.png';
 }
 

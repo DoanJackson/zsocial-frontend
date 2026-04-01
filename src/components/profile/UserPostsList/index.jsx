@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import Post from '../../feed/Post';
-import PostDetailModal from '../../feed/PostDetailModal';
-import MediaViewerModal from '../../feed/MediaViewerModal';
-import ConfirmDialog from '../../ConfirmDialog';
-import postService from '../../../services/postService';
+import FeedPost from '@/components/feed/FeedPost';
+import PostDetailModal from '@/components/feed/PostDetailModal';
+import MediaCarouselViewer from '@/components/MediaCarouselViewer';
+import ConfirmDialog from '@/components/ConfirmDialog';
+import postService from '@/services/postService';
 import { toast } from 'react-toastify';
-import { POST_PAGE_SIZE, SCROLL_THRESHOLD } from '../../../constants/pagination';
+import { POST_PAGE_SIZE, SCROLL_THRESHOLD } from '@/constants/pagination';
 
 /**
  * Infinite-scroll post list for a user's profile page.
@@ -24,7 +24,7 @@ const UserPostsList = ({ userId, isOwner, onCreatePost }) => {
     const [selectedPost, setSelectedPost] = useState(null);
     const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [isMediaViewerOpen, setMediaViewerOpen] = useState(false);
-    const [mediaViewerPost, setMediaViewerPost] = useState(null);
+    const [mediaViewerMedias, setMediaViewerMedias] = useState([]);
     const [initialMediaIndex, setInitialMediaIndex] = useState(0);
     const [pendingDeletePost, setPendingDeletePost] = useState(null);
 
@@ -99,15 +99,7 @@ const UserPostsList = ({ userId, isOwner, onCreatePost }) => {
     const closePostDetail = () => { setSelectedPost(null); setDetailModalOpen(false); };
 
     const handleImageClick = (post, index) => {
-        setMediaViewerPost({
-            ...post,
-            user: post.author.fullName,
-            avatar: post.author.avatar?.url,
-            time: post.createdAt,
-            likes: post.likeCount || 0,
-            comments: post.commentCount,
-            images: post.medias.map(m => m.url || m),
-        });
+        setMediaViewerMedias(post.medias);
         setInitialMediaIndex(index);
         setMediaViewerOpen(true);
     };
@@ -177,7 +169,7 @@ const UserPostsList = ({ userId, isOwner, onCreatePost }) => {
             ) : (
                 <div className="flex flex-col gap-4">
                     {posts.map((post, idx) => (
-                        <Post
+                        <FeedPost
                             key={`${post.id}-${idx}`}
                             post={post}
                             isOwner={isOwner}
@@ -211,10 +203,10 @@ const UserPostsList = ({ userId, isOwner, onCreatePost }) => {
                 onImageClick={handleImageClick}
                 onCommentAdded={handleCommentAdded}
             />
-            <MediaViewerModal
+            <MediaCarouselViewer
                 isOpen={isMediaViewerOpen}
                 onClose={() => setMediaViewerOpen(false)}
-                post={mediaViewerPost}
+                medias={mediaViewerMedias}
                 initialIndex={initialMediaIndex}
             />
             <ConfirmDialog

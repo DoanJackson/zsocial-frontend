@@ -1,59 +1,107 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-const SearchBar = () => {
+const SearchBar = ({ className }) => {
     const navigate = useNavigate();
     const [value, setValue] = useState('');
-    const [focused, setFocused] = useState(false);
-    const inputRef = useRef(null);
+    const [isMobileExpanded, setIsMobileExpanded] = useState(false);
+    
+    const desktopInputRef = useRef(null);
+    const mobileInputRef = useRef(null);
 
     const handleSubmit = (e) => {
         e.preventDefault();
         const q = value.trim();
         if (!q) return;
         navigate(`/search?q=${encodeURIComponent(q)}`);
-        inputRef.current?.blur();
+        desktopInputRef.current?.blur();
+        mobileInputRef.current?.blur();
+        setIsMobileExpanded(false); // Close expanded mobile view on submit
     };
 
-    return (
-        <form onSubmit={handleSubmit} className="flex items-center">
-            <div
-                className={`flex items-center gap-2 bg-[#f0f2f5] rounded-full px-3 py-1.5 transition-all duration-200 ${focused ? 'ring-2 ring-[#1877f2]/40 bg-white shadow-sm w-56' : 'w-44'
-                    }`}
-            >
-                <svg
-                    className={`w-4 h-4 flex-shrink-0 transition-colors ${focused ? 'text-[#1877f2]' : 'text-gray-400'}`}
-                    fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+    // Auto focus mobile input when expansion triggers
+    useEffect(() => {
+        if (isMobileExpanded) {
+            mobileInputRef.current?.focus();
+        }
+    }, [isMobileExpanded]);
 
+    const containerClass = className || "hidden md:flex items-center bg-slate-100 px-4 py-2 rounded-full w-80 group transition-all focus-within:bg-white focus-within:ring-2 ring-blue-600/20 shadow-sm";
+
+    return (
+        <>
+            {/* Desktop View (and hidden on mobile by default using md:flex) */}
+            <form onSubmit={handleSubmit} className={containerClass}>
+                <span className="material-symbols-outlined text-slate-400 mr-2 transition-colors group-focus-within:text-blue-500 select-none">
+                    search
+                </span>
                 <input
-                    ref={inputRef}
-                    id="header-search-input"
+                    ref={desktopInputRef}
                     type="text"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
-                    onFocus={() => setFocused(true)}
-                    onBlur={() => setFocused(false)}
-                    placeholder="Tìm kiếm bài viết..."
-                    className="bg-transparent outline-none border-none text-sm text-gray-700 placeholder-gray-400 w-full min-w-0"
+                    placeholder="Tìm kiếm trên ZSocial..."
+                    className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 outline-none text-slate-800"
                 />
-
                 {value && (
                     <button
                         type="button"
-                        onClick={() => { setValue(''); inputRef.current?.focus(); }}
-                        className="text-gray-400 hover:text-gray-600 flex-shrink-0 transition-colors"
+                        onClick={() => { setValue(''); desktopInputRef.current?.focus(); }}
+                        className="cursor-pointer text-slate-400 hover:text-slate-600 flex-shrink-0 transition-colors flex items-center justify-center rounded-full active:scale-95"
+                        title="Xóa tìm kiếm"
                     >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <span className="material-symbols-outlined text-[18px]">close</span>
                     </button>
                 )}
-            </div>
-        </form>
+            </form>
+
+            {/* Mobile View: Collapsed icon button */}
+            {!isMobileExpanded && (
+                <button
+                    type="button"
+                    onClick={() => setIsMobileExpanded(true)}
+                    className="md:hidden cursor-pointer p-2 hover:bg-slate-100 transition-colors rounded-full text-slate-500 flex items-center justify-center -ml-2"
+                    aria-label="Mở tìm kiếm"
+                >
+                    <span className="material-symbols-outlined text-2xl">search</span>
+                </button>
+            )}
+
+            {/* Mobile View: Expanded overlay form */}
+            {isMobileExpanded && (
+                <div className="md:hidden absolute inset-y-0 left-0 right-0 w-full px-4 bg-white/95 backdrop-blur-xl z-[100] flex items-center gap-3 animate-in fade-in zoom-in-95 duration-200">
+                    <button
+                        type="button"
+                        onClick={() => setIsMobileExpanded(false)}
+                        className="cursor-pointer p-2 hover:bg-slate-100 rounded-full text-slate-500 transition-colors active:scale-95 flex-shrink-0"
+                        aria-label="Quay lại"
+                    >
+                        <span className="material-symbols-outlined">arrow_back</span>
+                    </button>
+                    
+                    <form onSubmit={handleSubmit} className="flex-1 flex items-center bg-slate-100 px-4 py-2 rounded-full focus-within:bg-white focus-within:ring-2 ring-blue-600/20 transition-all shadow-sm">
+                        <input
+                            ref={mobileInputRef}
+                            type="text"
+                            value={value}
+                            onChange={(e) => setValue(e.target.value)}
+                            placeholder="Tìm kiếm..."
+                            className="bg-transparent border-none focus:ring-0 text-sm w-full placeholder:text-slate-400 outline-none text-slate-800"
+                        />
+                        {value && (
+                            <button
+                                type="button"
+                                onClick={() => { setValue(''); mobileInputRef.current?.focus(); }}
+                                className="cursor-pointer text-slate-400 hover:text-slate-600 flex-shrink-0 transition-colors flex items-center justify-center rounded-full active:scale-95 ml-2"
+                                title="Xóa"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        )}
+                    </form>
+                </div>
+            )}
+        </>
     );
 };
 

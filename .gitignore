@@ -28,3 +28,10 @@ dist-ssr
 .vscode/*
 .env
 .env.production
+.claude/*
+.github/*
+.agents/*
+skills-lock.json
+/src/refac/**
+.stitch/**
+/src/prompt/**

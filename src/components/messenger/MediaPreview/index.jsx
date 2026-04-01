@@ -1,4 +1,5 @@
-import { isVideoFile } from '../../../utils/messengerHelpers';
+import React from 'react';
+import { isVideoFile } from '@/utils/messengerHelpers';
 
 function MediaPreview({ files, onRemove }) {
     if (!files || files.length === 0) return null;
@@ -15,7 +16,7 @@ function MediaPreview({ files, onRemove }) {
                         )}
                         <button
                             onClick={() => onRemove(idx)}
-                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-700 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs leading-none"
+                            className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-gray-700 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-xs leading-none cursor-pointer hover:bg-red-500"
                         >
                             ×
                         </button>

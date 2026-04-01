@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { toast } from 'react-toastify';
-import chatService from '../../../services/chatService';
-import Avatar from '../Avatar';
+import chatService from '@/services/chatService';
+import Avatar from '@/components/messenger/Avatar';
 
 /**
  * SendMessageModal — Popup để gửi tin nhắn trực tiếp tới một người dùng.
@@ -73,7 +73,7 @@ const SendMessageModal = ({ isOpen, onClose, receiverId, receiverName, receiverA
             onClick={handleClose}
         >
             <div
-                className="bg-white rounded-xl shadow-2xl w-[90%] max-w-[460px] flex flex-col overflow-hidden"
+                className="bg-white rounded-xl shadow-2xl w-[90%] max-w-[460px] flex flex-col overflow-hidden text-left"
                 style={{ animation: 'modalFadeIn 0.18s ease-out' }}
                 onClick={e => e.stopPropagation()}
             >
@@ -91,7 +91,7 @@ const SendMessageModal = ({ isOpen, onClose, receiverId, receiverName, receiverA
                 </div>
 
                 {/* Recipient */}
-                <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-gray-50 cursor-default">
                     <Avatar src={receiverAvatar} name={receiverName || '?'} size={36} />
                     <div>
                         <p className="text-sm font-semibold text-gray-900">{receiverName || 'Người dùng'}</p>
@@ -109,7 +109,7 @@ const SendMessageModal = ({ isOpen, onClose, receiverId, receiverName, receiverA
                                     <img
                                         src={url}
                                         alt=""
-                                        className="w-16 h-16 object-cover rounded-lg border border-gray-200"
+                                        className="w-16 h-16 object-cover rounded-lg border border-gray-200 cursor-pointer"
                                         onLoad={() => URL.revokeObjectURL(url)}
                                     />
                                     <button
@@ -168,8 +168,8 @@ const SendMessageModal = ({ isOpen, onClose, receiverId, receiverName, receiverA
                     <button
                         onClick={handleSend}
                         disabled={!canSend}
-                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-semibold text-sm transition-colors cursor-pointer ${canSend
-                            ? 'bg-[#1877f2] hover:bg-[#166fe5] text-white'
+                        className={`flex items-center gap-2 px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${canSend
+                            ? 'bg-[#1877f2] hover:bg-[#166fe5] text-white cursor-pointer'
                             : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
                     >
