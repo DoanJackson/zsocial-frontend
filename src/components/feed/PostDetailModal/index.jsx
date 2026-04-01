@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Modal from '../../Modal';
-import PostImages from '../PostImages';
-import commentService from '../../../services/commentService';
-import CommentItem from '../CommentItem';
-import CommentInput from '../CommentInput';
-import { timeAgo } from '../../../utils/timeAgo';
-import { getDefaultAvatarUrl } from '../../../utils/avatarUtils';
+import commentService from '@/services/commentService';
+import PostDetailHeader from './PostDetailHeader';
+import PostDetailBody from './PostDetailBody';
+import PostDetailMedia from './PostDetailMedia';
+import PostDetailStats from './PostDetailStats';
+import PostDetailActions from './PostDetailActions';
+import PostDetailCommentList from './PostDetailCommentList';
+import PopupCommentItem from './PopupCommentItem';
+import PopupCommentInput from './PopupCommentInput';
+import ConfirmDialog from '@/components/ConfirmDialog';
 
 const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }) => {
     const navigate = useNavigate();
@@ -14,6 +17,8 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
     const [loadingComments, setLoadingComments] = useState(false);
     const [activeDropdown, setActiveDropdown] = useState(null);
     const [replyingTo, setReplyingTo] = useState(null);
+    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [commentToDelete, setCommentToDelete] = useState(null);
 
     const goToProfile = () => {
         if (post?.author?.userId) {
@@ -32,6 +37,8 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
+    const fetchedForPostRef = React.useRef(null);
+
     const fetchComments = async () => {
         if (!post) return;
         setLoadingComments(true);
@@ -49,8 +56,12 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
 
     useEffect(() => {
         if (isOpen && post?.id) {
-            fetchComments();
+            if (fetchedForPostRef.current !== post.id) {
+                fetchedForPostRef.current = post.id;
+                fetchComments();
+            }
         } else {
+            fetchedForPostRef.current = null;
             setComments([]);
             setReplyingTo(null);
             setActiveDropdown(null);
@@ -69,99 +80,57 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
         if (onCommentAdded) onCommentAdded(postId);
     };
 
-    if (!post) return null;
+    const handleDeleteComment = (commentId) => {
+        setCommentToDelete(commentId);
+        setConfirmDeleteOpen(true);
+        setActiveDropdown(null);
+    };
 
-    const handleDeleteComment = async (commentId) => {
+    const confirmDelete = async () => {
+        if (!commentToDelete) return;
         try {
-            if (window.confirm("Bạn có chắc chắn muốn xóa bình luận này không?")) {
-                await commentService.deleteComment(commentId);
-                fetchComments();
-            }
+            await commentService.deleteComment(commentToDelete);
+            fetchComments();
         } catch (error) {
             console.error("Failed to delete comment", error);
         } finally {
-            setActiveDropdown(null);
+            setConfirmDeleteOpen(false);
+            setCommentToDelete(null);
         }
     };
 
+    if (!post || !isOpen) return null;
+
     return (
-        <Modal
-            isOpen={isOpen}
-            onClose={onClose}
-            title={`${post.author.fullName}'s Post`}
-            footer={
-                <div className="px-4">
-                    <CommentInput
-                        postId={post.id}
-                        replyingTo={replyingTo}
-                        setReplyingTo={setReplyingTo}
-                        onCommentAdded={handleCommentAdded}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-on-background/40 backdrop-blur-md transition-all">
+            <div className="bg-surface-container-lowest w-full max-w-2xl h-full max-h-[90vh] rounded-xl shadow-2xl overflow-hidden flex flex-col relative">
+                <PostDetailHeader
+                    author={post.author}
+                    createdAt={post.createdAt}
+                    location={post.location}
+                    onClose={onClose}
+                    goToProfile={goToProfile}
+                />
+
+                <div className="flex-1 overflow-y-auto hide-scrollbar">
+                    <PostDetailBody content={post.content} title={post.title} />
+                    <PostDetailMedia
+                        medias={post.medias}
+                        onImageClick={(index) => onImageClick && onImageClick(post, index)}
                     />
-                </div>
-            }
-        >
-            <div className="flex flex-col gap-4">
-                <div className="border-b border-[#eee] pb-4">
-                    <div className="flex items-center px-4 pt-2 pb-2 gap-2">
-                        <img
-                            src={post.author.avatar?.url || getDefaultAvatarUrl()}
-                            alt={post.author.username}
-                            className="w-10 h-10 rounded-full object-cover shrink-0 cursor-pointer"
-                            onClick={goToProfile}
-                        />
-                        <div className="flex flex-col">
-                            <h4
-                                className="m-0 text-base font-semibold cursor-pointer hover:underline"
-                                onClick={goToProfile}
-                            >
-                                {post.author.fullName}
-                            </h4>
-                            <span className="text-[0.8rem] text-[#65676b]">{timeAgo(post.createdAt)}</span>
-                        </div>
-                    </div>
+                    <PostDetailStats
+                        likeCount={post.likeCount}
+                        commentCount={post.commentCount || comments.length}
+                        shareCount={post.shareCount}
+                    />
+                    <PostDetailActions />
 
-                    <div className="px-4 text-[0.95rem] leading-relaxed mb-3 whitespace-pre-wrap">{post.content}</div>
-
-                    <div className="post-detail-images-wrapper">
-                        <PostImages
-                            medias={post.medias}
-                            onImageClick={(index) => onImageClick && onImageClick(post, index)}
-                        />
-                    </div>
-                </div>
-
-                <div className="flex justify-between items-center px-4 py-2 text-[#65676b] text-[0.9rem] border-b border-[#ced0d4]">
-                    <span className="flex items-center">
-                        <span className="bg-[#1877f2] text-white rounded-full p-[2px] text-[0.7rem] mr-1 w-[18px] h-[18px] flex justify-center items-center">👍</span> {post.likeCount || 0}
-                    </span>
-                    <span>
-                        {post.commentCount || comments.length || 0} bình luận
-                    </span>
-                </div>
-
-                <div className="flex px-4 py-1 mb-2 border-b border-[#ced0d4]">
-                    <button className="flex-1 bg-transparent border-none text-[#65676b] font-semibold py-2 px-1 rounded flex justify-center items-center gap-2 hover:bg-[#f0f2f5] cursor-pointer transition-colors duration-200">
-                        <span className="text-[1.1rem]">👍</span> Thích
-                    </button>
-                    <button className="flex-1 bg-transparent border-none text-[#65676b] font-semibold py-2 px-1 rounded flex justify-center items-center gap-2 hover:bg-[#f0f2f5] cursor-pointer transition-colors duration-200">
-                        <span className="text-[1.1rem]">💬</span> Bình luận
-                    </button>
-                    <button className="flex-1 bg-transparent border-none text-[#65676b] font-semibold py-2 px-1 rounded flex justify-center items-center gap-2 hover:bg-[#f0f2f5] cursor-pointer transition-colors duration-200">
-                        <span className="text-[1.1rem]">📤</span> Gửi
-                    </button>
-                </div>
-
-                <div className="flex flex-col">
-                    <div className="px-4 mb-2">
-                        <span className="font-semibold text-[#65676b] cursor-pointer dropdown-arrow">Phù hợp nhất ▾</span>
-                    </div>
-
-                    <div className="mt-2 px-4 pb-2">
+                    <PostDetailCommentList>
                         {loadingComments ? (
-                            <p>Đang tải bình luận...</p>
+                            <p className="text-sm text-on-surface-variant px-5 font-medium">Đang tải bình luận...</p>
                         ) : comments.length > 0 ? (
                             comments.map((comment) => (
-                                <CommentItem
+                                <PopupCommentItem
                                     key={comment.id}
                                     comment={comment}
                                     depth={0}
@@ -169,10 +138,11 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
                                     setActiveDropdown={setActiveDropdown}
                                     onReply={handleReplyClick}
                                     onDelete={handleDeleteComment}
+                                    postAuthorId={post?.author?.id || post?.author?.userId}
                                 >
                                     {replyingTo?.id === comment.id && (
                                         <div className="mt-1 mb-2 w-full box-border">
-                                            <CommentInput
+                                            <PopupCommentInput
                                                 postId={post.id}
                                                 replyingTo={replyingTo}
                                                 setReplyingTo={setReplyingTo}
@@ -181,15 +151,36 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
                                             />
                                         </div>
                                     )}
-                                </CommentItem>
+                                </PopupCommentItem>
                             ))
                         ) : (
-                            <p>Chưa có bình luận nào.</p>
+                            <p className="text-sm text-on-surface-variant px-5 font-medium">Chưa có bình luận nào.</p>
                         )}
-                    </div>
+                    </PostDetailCommentList>
                 </div>
+
+                <PopupCommentInput
+                    postId={post.id}
+                    replyingTo={replyingTo}
+                    setReplyingTo={setReplyingTo}
+                    onCommentAdded={handleCommentAdded}
+                />
             </div>
-        </Modal>
+
+            <ConfirmDialog
+                isOpen={confirmDeleteOpen}
+                title="Xóa bình luận"
+                message="Bạn có chắc chắn muốn xóa bình luận này không? Hành động này không thể hoàn tác."
+                confirmLabel="Xóa"
+                cancelLabel="Hủy"
+                variant="danger"
+                onConfirm={confirmDelete}
+                onCancel={() => {
+                    setConfirmDeleteOpen(false);
+                    setCommentToDelete(null);
+                }}
+            />
+        </div>
     );
 };
 

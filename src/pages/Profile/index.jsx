@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import Header from '../../components/Header';
-import ProfileHeader from '../../components/profile/ProfileHeader';
-import ProfileSidebar from '../../components/profile/ProfileSidebar';
-import CreatePostBox from '../../components/profile/CreatePostBox';
-import UserPostsList from '../../components/profile/UserPostsList';
-import CreatePostModal from '../../components/feed/CreatePostModal';
-import { useAuth } from '../../contexts/AuthContext';
-import userService from '../../services/userService';
+import Header from '@/components/Header';
+import ProfileHeader from '@/components/profile/ProfileHeader';
+import ProfileSidebar from '@/components/profile/ProfileSidebar';
+import CreatePostBox from '@/components/profile/CreatePostBox';
+import UserPostsList from '@/components/profile/UserPostsList';
+import CreatePostModal from '@/components/feed/CreatePostModal';
+import { useAuth } from '@/contexts/AuthContext';
+import userService from '@/services/userService';
 
 const Profile = () => {
     const { userId } = useParams();
@@ -138,7 +138,7 @@ const Profile = () => {
     }
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5] font-['Inter',system-ui,Avenir,Helvetica,Arial,sans-serif]">
+        <div className="min-h-screen bg-[#f0f2f5] font-['Inter',system-ui,Avenir,Helvetica,Arial,sans-serif] pt-[56px]">
             <Header />
 
             {/* Profile Header (cover + avatar + info + actions) */}

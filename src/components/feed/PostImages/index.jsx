@@ -18,7 +18,9 @@ const PostImages = ({ medias, onImageClick }) => {
         <div className={`grid gap-[2px] w-full overflow-hidden bg-white ${getGridClass(imageCount)}`}>
             {displayImages.map((media, index) => {
                 const src = typeof media === 'string' ? media : media.url;
-                const isVideo = typeof media === 'string' ? media.type === 'VIDEO' : false;
+                const isVideo = typeof media === 'string' 
+                    ? src.toLowerCase().match(/\.(mp4|webm|ogg)$/) !== null 
+                    : media.type === 'VIDEO' || src.toLowerCase().match(/\.(mp4|webm|ogg)$/) !== null;
 
                 return (
                     <div

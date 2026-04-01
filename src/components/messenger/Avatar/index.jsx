@@ -1,3 +1,5 @@
+import React from 'react';
+
 function Avatar({ src, name, size = 40, className = '' }) {
     if (src) {
         return (

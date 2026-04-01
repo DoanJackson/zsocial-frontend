@@ -1,16 +1,23 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Header from '../../components/Header';
-import Post from '../../components/feed/Post';
-import CreatePostModal from '../../components/feed/CreatePostModal';
-import PostDetailModal from '../../components/feed/PostDetailModal';
-import MediaViewerModal from '../../components/feed/MediaViewerModal';
-import postService from '../../services/postService';
-import { POST_PAGE_SIZE, SCROLL_THRESHOLD } from '../../constants/pagination';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import Header from '@/components/Header';
+import CreatePostModal from '@/components/feed/CreatePostModal';
+import MediaCarouselViewer from '@/components/MediaCarouselViewer';
+import postService from '@/services/postService';
+import { POST_PAGE_SIZE, SCROLL_THRESHOLD } from '@/constants/pagination';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '@/contexts/AuthContext';
+
+// New Stitch-styled components
+import FeedSidebar from '@/components/feed/FeedSidebar';
+import CreatePostBox from '@/components/feed/CreatePostBox';
+import FeedPost from '@/components/feed/FeedPost';
+import FeedRightPanel from '@/components/feed/FeedRightPanel';
 
 const Feed = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
+    const location = useLocation();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -24,10 +31,8 @@ const Feed = () => {
 
     // Modal States
     const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-    const [selectedPost, setSelectedPost] = useState(null);
-    const [isDetailModalOpen, setDetailModalOpen] = useState(false);
     const [isMediaViewerOpen, setMediaViewerOpen] = useState(false);
-    const [mediaViewerPost, setMediaViewerPost] = useState(null);
+    const [mediaViewerMedias, setMediaViewerMedias] = useState([]);
     const [initialMediaIndex, setInitialMediaIndex] = useState(0);
 
     // Load Posts Function
@@ -89,99 +94,64 @@ const Feed = () => {
         return () => window.removeEventListener('scroll', handleScroll);
     }, [loadPosts]);
 
-
     const handlePostSubmit = () => {
         setCreateModalOpen(false);
-        // Optionally refresh feed or prepend new post
     };
 
     const openPostDetail = (post) => {
-        setSelectedPost(post);
-        setDetailModalOpen(true);
-    };
-
-    const closePostDetail = () => {
-        setSelectedPost(null);
-        setDetailModalOpen(false);
+        navigate(`/post/${post.id}`, { state: { backgroundLocation: location, post } });
     };
 
     const handleImageClick = (post, index) => {
-        setMediaViewerPost({
-            ...post,
-            user: post.author.fullName,
-            avatar: post.author.avatar?.url,
-            time: post.createdAt,
-            likes: 0,
-            comments: post.commentCount,
-            images: post.medias.map(m => m.url || m)
-        });
+        setMediaViewerMedias(post.medias);
         setInitialMediaIndex(index);
         setMediaViewerOpen(true);
     };
 
-    const handleCommentAdded = (postId) => {
-        setPosts(currentPosts => currentPosts.map(p => {
-            if (p.id === postId) {
-                return { ...p, commentCount: (p.commentCount || 0) + 1 };
-            }
-            return p;
-        }));
-
-        if (selectedPost && selectedPost.id === postId) {
-            setSelectedPost(prev => ({ ...prev, commentCount: (prev.commentCount || 0) + 1 }));
-        }
-    };
-
     return (
-        <div className="min-h-screen bg-[#f0f2f5] text-[#050505] font-['Inter',system-ui,Avenir,Helvetica,Arial,sans-serif]">
+        <div className="min-h-screen bg-background text-on-background selection:bg-primary-container selection:text-on-primary-container font-body">
             <Header />
 
-            <div className="max-w-[700px] mx-auto my-8 px-4 w-full box-border">
-                {/* Create Post Trigger */}
-                <div className="bg-white p-4 md:p-6 rounded-lg shadow-[0_1px_2px_rgba(0,0,0,0.1)] mb-6">
-                    <div className="flex gap-4 mb-4 items-center">
-                        {user?.avatar ? (
-                            <img
-                                src={user.avatar}
-                                alt="Avatar"
-                                className="w-10 h-10 rounded-full bg-[#ddd] object-cover"
-                            />
-                        ) : (
-                            <div className="w-10 h-10 rounded-full bg-[#1877f2] flex items-center justify-center text-white font-bold text-sm select-none flex-shrink-0">
-                                {user?.fullName?.[0]?.toUpperCase() || user?.userId?.[0]?.toUpperCase() || 'U'}
-                            </div>
-                        )}
-                        <div
-                            className="flex-1 bg-[#f0f2f5] rounded-full py-3 px-5 text-base text-[#65676b] cursor-pointer flex items-center hover:bg-[#e4e6eb] transition-colors"
-                            onClick={() => setCreateModalOpen(true)}
-                        >
-                            Bạn đang nghĩ gì thế?
+            <main className="pt-24 pb-12 px-4 md:px-6 max-w-[1440px] mx-auto min-h-screen">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
+
+                    {/* Left Column: Navigation & Communities */}
+                    <FeedSidebar />
+
+                    {/* Center Column: Feed & Creation */}
+                    <div className="col-span-1 md:col-span-6 space-y-8">
+
+                        {/* Create Post Box */}
+                        <CreatePostBox user={user} onOpen={() => setCreateModalOpen(true)} />
+
+                        {/* Posts List */}
+                        <div className="space-y-8">
+                            {posts.map((post, index) => (
+                                <FeedPost
+                                    key={`${post.id}-${index}`}
+                                    post={post}
+                                    onCommentClick={openPostDetail}
+                                    onImageClick={(imgIndex) => handleImageClick(post, imgIndex)}
+                                />
+                            ))}
+                            {loading && (
+                                <p className="text-center py-4 text-on-surface-variant font-medium">
+                                    Đang tải thêm bài viết...
+                                </p>
+                            )}
+                            {!hasMore && (
+                                <p className="text-center py-4 text-on-surface-variant font-medium">
+                                    Bạn đã xem hết bài viết.
+                                </p>
+                            )}
                         </div>
                     </div>
-                    <div className="flex justify-between items-center border-t border-[#eee] pt-4">
-                        <button
-                            className="bg-transparent border-none text-[#65676b] font-semibold flex items-center gap-2 p-2 rounded hover:bg-[#f0f2f5] cursor-pointer transition-colors"
-                            onClick={() => setCreateModalOpen(true)}
-                        >
-                            📷 Ảnh/Video
-                        </button>
-                    </div>
-                </div>
 
-                {/* Posts List */}
-                <div className="flex flex-col gap-4">
-                    {posts.map((post, index) => (
-                        <Post
-                            key={`${post.id}-${index}`}
-                            post={post}
-                            onCommentClick={openPostDetail}
-                            onImageClick={(imgIndex) => handleImageClick(post, imgIndex)}
-                        />
-                    ))}
-                    {loading && <div className="text-center py-4 text-[#65676b] font-medium">Đang tải thêm bài viết...</div>}
-                    {!hasMore && <div className="text-center py-4 text-[#65676b] font-medium">Bạn đã xem hết bài viết.</div>}
+                    {/* Right Column: Trends & Suggestions */}
+                    <FeedRightPanel />
+
                 </div>
-            </div>
+            </main>
 
             <CreatePostModal
                 isOpen={isCreateModalOpen}
@@ -190,18 +160,10 @@ const Feed = () => {
                 userAvatar={user?.avatar || null}
             />
 
-            <PostDetailModal
-                isOpen={isDetailModalOpen}
-                onClose={closePostDetail}
-                post={selectedPost}
-                onImageClick={handleImageClick}
-                onCommentAdded={handleCommentAdded}
-            />
-
-            <MediaViewerModal
+            <MediaCarouselViewer
                 isOpen={isMediaViewerOpen}
                 onClose={() => setMediaViewerOpen(false)}
-                post={mediaViewerPost}
+                medias={mediaViewerMedias}
                 initialIndex={initialMediaIndex}
             />
         </div>

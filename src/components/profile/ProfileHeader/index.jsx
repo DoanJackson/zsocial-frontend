@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
-import ImageViewer from '../../ImageViewer';
-import SendMessageModal from '../../messenger/SendMessageModal';
+import MediaCarouselViewer from '@/components/MediaCarouselViewer';
+import SendMessageModal from '@/components/messenger/SendMessageModal';
 
 const formatDob = (dob) => {
     if (!dob) return null;
@@ -30,14 +30,17 @@ const ProfileHeader = ({
     // Send message modal state
     const [isSendMessageOpen, setSendMessageOpen] = useState(false);
 
-    // Image viewer state
-    const [viewerSrc, setViewerSrc] = useState(null);
-    const [viewerAlt, setViewerAlt] = useState('');
+    // Media viewer state
+    const [isMediaViewerOpen, setMediaViewerOpen] = useState(false);
+    const [mediaViewerMedias, setMediaViewerMedias] = useState([]);
 
     const openViewer = (src, alt) => {
-        if (src) { setViewerSrc(src); setViewerAlt(alt); }
+        if (src) {
+            setMediaViewerMedias([{ url: src, type: 'IMAGE' }]);
+            setMediaViewerOpen(true);
+        }
     };
-    const closeViewer = () => setViewerSrc(null);
+    const closeViewer = () => setMediaViewerOpen(false);
 
     const handleAvatarFileChange = (e) => {
         const file = e.target.files?.[0];
@@ -57,7 +60,8 @@ const ProfileHeader = ({
         <>
             <div className="bg-white shadow-sm">
                 {/* ── Cover Photo ── */}
-                <div className="relative w-full h-[300px] md:h-[350px] bg-[#e4e6eb] group overflow-hidden">
+                {/* center */}
+                <div className="relative w-full h-[350px] md:h-[400px] bg-[#e4e6eb] group overflow-hidden">
                     {profileUser?.cover?.url ? (
                         <img
                             src={profileUser.cover.url}
@@ -228,10 +232,13 @@ const ProfileHeader = ({
                 </div>
             </div>
 
-            {/* Image viewer (cover & avatar) — reuse existing ImageViewer component */}
-            {viewerSrc && (
-                <ImageViewer src={viewerSrc} alt={viewerAlt} onClose={closeViewer} />
-            )}
+            {/* Media viewer (cover & avatar) */}
+            <MediaCarouselViewer
+                isOpen={isMediaViewerOpen}
+                onClose={closeViewer}
+                medias={mediaViewerMedias}
+                initialIndex={0}
+            />
 
             {/* Send Message Modal */}
             <SendMessageModal

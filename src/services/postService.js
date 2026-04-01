@@ -21,6 +21,10 @@ const postService = {
     });
   },
 
+  getPostById: (postId) => {
+    return axiosClient.get(`/api/posts/${postId}`);
+  },
+
   searchPosts: (keyword, size = 4, lastPostId = null) => {
     const params = { keyword, size };
     if (lastPostId) params.lastPostId = lastPostId;
