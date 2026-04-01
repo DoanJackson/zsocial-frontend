@@ -44,6 +44,7 @@ const Profile = () => {
                 }
                 if (response.success) {
                     setProfileUser(response.data);
+                    setIsFollowing(!!response.data.followedByMe);
                 } else {
                     toast.error('Không thể tải thông tin người dùng');
                 }
