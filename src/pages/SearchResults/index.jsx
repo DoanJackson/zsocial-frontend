@@ -17,8 +17,8 @@ const SearchResults = () => {
     const [hasMore, setHasMore] = useState(false);
     const [error, setError] = useState(null);
 
-    // Cursor stored as state so useCallback deps update correctly
-    const [lastPostId, setLastPostId] = useState(null);
+    // Pagination state
+    const [page, setPage] = useState(0);
 
     // Component-level ref prevents concurrent requests across re-renders
     const loadingRef = useRef(false);
@@ -32,7 +32,7 @@ const SearchResults = () => {
     useEffect(() => {
         loadingRef.current = false;
         setPosts([]);
-        setLastPostId(null);
+        setPage(0);
         setHasMore(!!keyword.trim());
         setError(null);
         setLoading(false);
@@ -45,21 +45,25 @@ const SearchResults = () => {
         loadingRef.current = true;
         setLoading(true);
         try {
-            const res = await postService.searchPosts(keyword, POST_PAGE_SIZE, lastPostId);
-            const { content = [], nextCursor, hasNext } = res.data ?? {};
+            const res = await postService.searchPosts(keyword, page, POST_PAGE_SIZE);
+            const { content = [], totalPages = 0 } = res.data ?? {};
 
             if (content.length > 0) {
-                setPosts(prev => [...prev, ...content]);
-                setLastPostId(nextCursor ?? null);
+                setPosts(prev => {
+                    const existingIds = new Set(prev.map(p => p.id));
+                    const newPosts = content.filter(p => !existingIds.has(p.id));
+                    return [...prev, ...newPosts];
+                });
+                setPage(prev => prev + 1);
             }
-            if (!hasNext) setHasMore(false);
+            if (page >= totalPages - 1 || content.length === 0) setHasMore(false);
         } catch {
             setError('Không thể tải kết quả tìm kiếm. Vui lòng thử lại.');
         } finally {
             loadingRef.current = false;
             setLoading(false);
         }
-    }, [keyword, lastPostId, hasMore]);
+    }, [keyword, page, hasMore]);
 
     // ── Scroll listener + initial load ─────────────
     useEffect(() => {

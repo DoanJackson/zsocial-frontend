@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ImageCarousel from './ImageCarousel';
 import { timeAgo as calculateTimeAgo } from '@/utils/timeAgo';
@@ -13,6 +13,9 @@ const FeedPost = ({ post, onCommentClick, onImageClick, isOwner, onDelete }) => 
     };
 
     // Derived states
+    const [isExpanded, setIsExpanded] = useState(false);
+    const isLongText = post.content && (post.content.length > 250 || post.content.split('\n').length > 4);
+
     const authorName = post.author?.fullName || post.author?.username || 'Unknown User';
     const authorAvatar = post.author?.avatar?.url || null;
     const authorInitials = authorName[0]?.toUpperCase() || 'U';
@@ -72,9 +75,20 @@ const FeedPost = ({ post, onCommentClick, onImageClick, isOwner, onDelete }) => 
                         {post.title}
                     </h3>
                 )}
-                <p className="text-on-surface leading-relaxed whitespace-pre-wrap">
+                <p className={`text-on-surface leading-relaxed whitespace-pre-wrap ${!isExpanded && isLongText ? 'line-clamp-4' : ''}`}>
                     {post.content}
                 </p>
+                {isLongText && (
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setIsExpanded(!isExpanded);
+                        }}
+                        className="mt-1 text-sm font-bold text-primary hover:underline cursor-pointer focus:outline-none"
+                    >
+                        {isExpanded ? 'Thu gọn' : 'Xem thêm...'}
+                    </button>
+                )}
             </div>
 
             {/* Carousel Implementation */}
