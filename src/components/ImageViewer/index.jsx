@@ -32,12 +32,13 @@ function ImageViewer({ src, alt = '', onClose }) {
                 src={src}
                 alt={alt}
                 draggable={false}
+                className={`max-w-full w-[100%] max-h-[80%] object-contain pointer-events-auto`}
                 style={{
                     transform: `scale(${scale})`,
-                    transition: 'transform 0.15s ease',
-                    maxWidth: '90vw',
-                    maxHeight: '85vh',
-                    objectFit: 'contain',
+                    // transition: 'transform 0.15s ease',
+                    // maxWidth: '90vw',
+                    // maxHeight: '85vh',
+                    // objectFit: 'contain',
                     userSelect: 'none',
                 }}
             />

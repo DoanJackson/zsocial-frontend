@@ -29,7 +29,7 @@ const MessageBubble = ({ msg, isMe, showName, setViewerImage }) => {
 
                 {/* Media rendering */}
                 {msg.medias && msg.medias.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
+                    <div className={`flex flex-wrap gap-2`}>
                         {msg.medias.map(m => (
                             m.type === 'VIDEO' ? (
                                 <video
@@ -45,7 +45,7 @@ const MessageBubble = ({ msg, isMe, showName, setViewerImage }) => {
                                     key={m.id}
                                     src={m.url}
                                     alt="Shared File"
-                                    className="rounded-xl w-full h-auto object-cover max-h-60 shadow-sm cursor-pointer hover:opacity-90 transition-opacity"
+                                    className="rounded-xl h-auto object-contain max-h-60 shadow-sm cursor-pointer hover:opacity-90 transition-opacity "
                                     onClick={() => setViewerImage({ src: m.url, alt: '' })}
                                 />
                             )
