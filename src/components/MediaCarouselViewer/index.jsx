@@ -7,7 +7,7 @@ const MediaCarouselViewer = ({ isOpen, onClose, medias = [], initialIndex = 0 })
         if (isOpen) {
             setCurrentIndex(initialIndex >= 0 && initialIndex < medias.length ? initialIndex : 0);
             document.body.style.overflow = 'hidden';
-            
+
             const handleKeyDown = (e) => {
                 if (e.key === 'Escape') onClose();
                 if (e.key === 'ArrowRight') handleNext(e);
@@ -44,14 +44,14 @@ const MediaCarouselViewer = ({ isOpen, onClose, medias = [], initialIndex = 0 })
     const currentMedia = medias[currentIndex];
     const src = typeof currentMedia === 'string' ? currentMedia : currentMedia.url;
     // Check type explicitly or fallback to checking the extension in URL
-    const isVideo = typeof currentMedia === 'string' 
+    const isVideo = typeof currentMedia === 'string'
         ? src.toLowerCase().match(/\.(mp4|webm|ogg)$/) !== null
         : currentMedia.type === 'VIDEO' || src.toLowerCase().match(/\.(mp4|webm|ogg)$/) !== null;
 
     const hasMultiple = medias.length > 1;
 
     return (
-        <div 
+        <div
             className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/95 backdrop-blur-md transition-opacity duration-300 animate-[fadeIn_0.2s_ease-out]"
             onClick={handleBackdropClick}
         >
@@ -74,20 +74,20 @@ const MediaCarouselViewer = ({ isOpen, onClose, medias = [], initialIndex = 0 })
 
             <div className="relative w-full h-full flex items-center justify-center p-4 sm:p-12 md:p-24" onClick={handleBackdropClick}>
                 {isVideo ? (
-                    <video 
+                    <video
                         key={src} // force remount on src change
-                        src={src} 
-                        controls 
-                        autoPlay 
+                        src={src}
+                        controls
+                        autoPlay
                         className="max-w-full max-h-full rounded-2xl shadow-2xl object-contain bg-black pointer-events-auto"
                         onClick={(e) => e.stopPropagation()}
                     />
                 ) : (
-                    <img 
+                    <img
                         key={src}
-                        src={src} 
-                        alt={`Media ${currentIndex + 1}`} 
-                        className="max-w-full max-h-full rounded-2xl shadow-2xl object-contain pointer-events-auto animate-[scaleIn_0.25s_ease-out]"
+                        src={src}
+                        alt={`Media ${currentIndex + 1}`}
+                        className="max-w-full w-[100%] max-h-full rounded-2xl shadow-2xl object-contain pointer-events-auto animate-[scaleIn_0.25s_ease-out]"
                         onClick={(e) => e.stopPropagation()}
                         draggable={false}
                     />

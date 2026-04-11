@@ -1,4 +1,4 @@
-import axiosClient from './axiosClient';
+import axiosClient from '@/services/axiosClient';
 
 const postService = {
   getFriendsFeed: (size = 10, lastPostId = null) => {
@@ -25,9 +25,8 @@ const postService = {
     return axiosClient.get(`/api/posts/${postId}`);
   },
 
-  searchPosts: (keyword, size = 4, lastPostId = null) => {
-    const params = { keyword, size };
-    if (lastPostId) params.lastPostId = lastPostId;
+  searchPosts: (keyword, page = 0, size = 4) => {
+    const params = { keyword, page, size };
     return axiosClient.get('/api/posts/search', { params });
   },
 

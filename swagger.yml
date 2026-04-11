@@ -764,6 +764,7 @@ paths:
       parameters:
         - in: query
           name: keyword
+          required: true
           schema:
             type: string
         - in: query
@@ -780,12 +781,10 @@ paths:
           name: size
           schema:
             type: integer
-                - in: query
         - in: query
-          name: lastPostId
+          name: page
           schema:
             type: integer
-            format: int64
       responses:
         '200':
           description: Success
@@ -795,17 +794,25 @@ paths:
                 allOf:
                   - $ref: '#/components/schemas/BaseResponse'
                   - properties:
+                      # data:
+                      #   type: object
+                      #   properties:
+                      #     content:
+                      #       type: array
+                      #       items:
+                      #         $ref: '#/components/schemas/PostResponse'
+                      #     nextCursor:
+                      #       type: string
+                      #     hasNext:
+                      #       type: boolean
                       data:
-                        type: object
-                        properties:
-                          content:
-                            type: array
-                            items:
-                              $ref: '#/components/schemas/PostResponse'
-                          nextCursor:
-                            type: string
-                          hasNext:
-                            type: boolean
+                        allOf:
+                          - $ref: '#/components/schemas/CommonPageResponse'
+                          - properties:
+                              content:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/PostResponse'
 
   /api/posts/users/{userId}:
     get:
