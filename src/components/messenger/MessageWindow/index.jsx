@@ -73,7 +73,11 @@ function MessageWindow({ conversation, onMessageSent, onInfoClick, onBack }) {
                 <div className="h-2" />
             </div>
 
-            <MediaPreview files={attachedFiles} onRemove={handleRemoveFile} />
+            {attachedFiles?.length > 0 && (
+                <div className="pb-20 md:pb-0 shrink-0">
+                    <MediaPreview files={attachedFiles} onRemove={handleRemoveFile} />
+                </div>
+            )}
 
             {viewerImage && (
                 <ImageViewer
