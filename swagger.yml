@@ -40,6 +40,9 @@ components:
     SocketEventType:
       type: string
       enum: [NEW_MESSAGE, NEW_MESSAGE_ALERT, USER_TYPING]
+    ReactionTargetType:
+      type: string
+      enum: [POST, COMMENT]
 
     # ================= COMMON =================
     BaseResponse:
@@ -209,8 +212,12 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MediaBaseResponse'
-        isFollowed:
+        reactionCount:
+          type: integer
+          format: int64
+        reactedByMe:
           type: boolean
+
 
     PostsDetailResponse:
       type: object
@@ -365,6 +372,24 @@ components:
         childCommentCount:
           type: integer
           format: int64
+        reactedByMe:
+          type: boolean
+        reactionCount:
+          type: integer
+          format: int64
+
+    # ================= REACTION DTOs =================
+    ReactorsResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/UserSummaryResponse'
+        isFollowedByMe:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
 
 tags:
   - name: SSO
@@ -379,6 +404,8 @@ tags:
     description: Chat and Conversation endpoints
   - name: Comment
     description: Comment management endpoints
+  - name: Reaction
+    description: Reaction management endpoints
 
 paths:
   # ================= SSO =================
@@ -1327,3 +1354,80 @@ paths:
                             type: integer
                           empty:
                             type: boolean
+
+  # ================= Reaction ================= 
+  /api/reactions/toggle:
+    post:
+      tags: [Reaction]
+      summary: Toggle a reaction
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - targetId
+                - targetType
+              properties:
+                targetId:
+                  type: integer
+                  format: int64
+                targetType:
+                  $ref: '#/components/schemas/ReactionTargetType'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BaseResponse'
+  
+  /api/reactions/users:
+    get:
+      tags: [Reaction]
+      summary: Get reactors of a targetId
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: targetId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: targetType
+          required: true
+          schema:
+            $ref: '#/components/schemas/ReactionTargetType'
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 0
+        - in: query
+          name: size
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BaseResponse'
+                  - properties:
+                      data:
+                        allOf:
+                          - $ref: '#/components/schemas/CommonPageResponse'
+                          - properties:
+                              content:
+                                type: array
+                                items:
+                                  $ref: '#/components/schemas/ReactorsResponse'
+

@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ImageCarousel from './ImageCarousel';
 import { timeAgo as calculateTimeAgo } from '@/utils/timeAgo';
 import { toast } from 'react-toastify';
+import LikeListPopup from '@/components/common/LikeListPopup';
+import reactionService from '@/services/reactionService';
 
 const FeedPost = ({ post, onCommentClick, onImageClick, isOwner, onDelete }) => {
     const navigate = useNavigate();
@@ -14,7 +16,16 @@ const FeedPost = ({ post, onCommentClick, onImageClick, isOwner, onDelete }) => 
 
     // Derived states
     const [isExpanded, setIsExpanded] = useState(false);
+    const [isLikeListOpen, setIsLikeListOpen] = useState(false);
     const isLongText = post.content && (post.content.length > 250 || post.content.split('\n').length > 4);
+
+    const [localReactedByMe, setLocalReactedByMe] = useState(post.reactedByMe);
+    const [localReactionCount, setLocalReactionCount] = useState(post.reactionCount || 0);
+
+    useEffect(() => {
+        setLocalReactedByMe(post.reactedByMe);
+        setLocalReactionCount(post.reactionCount || 0);
+    }, [post.reactedByMe, post.reactionCount]);
 
     const authorName = post.author?.fullName || post.author?.username || 'Unknown User';
     const authorAvatar = post.author?.avatar?.url || null;
@@ -26,6 +37,30 @@ const FeedPost = ({ post, onCommentClick, onImageClick, isOwner, onDelete }) => 
             toast.success("Đã sao chép liên kết!");
         } catch (err) {
             toast.error("Không thể sao chép liên kết");
+        }
+    };
+
+    const openLikeList = () => {
+        if (localReactionCount > 0) {
+            setIsLikeListOpen(true);
+        }
+    };
+
+    const handleToggleLike = async () => {
+        const previousState = localReactedByMe;
+        const previousCount = localReactionCount;
+
+        // Optimistic update
+        setLocalReactedByMe(!previousState);
+        setLocalReactionCount(previousState ? Math.max(0, previousCount - 1) : previousCount + 1);
+
+        try {
+            await reactionService.toggleReaction(post.id, 'POST');
+        } catch (err) {
+            // Revert on error
+            setLocalReactedByMe(previousState);
+            setLocalReactionCount(previousCount);
+            toast.error("Không thể thay đổi cảm xúc");
         }
     };
 
@@ -98,36 +133,38 @@ const FeedPost = ({ post, onCommentClick, onImageClick, isOwner, onDelete }) => 
                 </div>
             )}
 
-            <div className="p-6 pt-2">
-                <div className="flex items-center justify-between border-b border-surface-container pb-4">
+            <div className="p-4 pt-2">
+                <div className="flex items-center justify-between border-b border-surface-container pb-2">
                     <div className="flex items-center -space-x-2">
-                        <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center ring-2 ring-white">
+                        <div
+                            className="w-6 h-6 rounded-full flex items-center justify-center ring-2 ring-white cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={openLikeList}
+                        >
                             <span
-                                className="material-symbols-outlined text-[12px] text-white"
-                                style={{ fontVariationSettings: "'FILL' 1" }}
-                            >
-                                thumb_up
-                            </span>
-                        </div>
-                        <div className="w-6 h-6 rounded-full bg-error flex items-center justify-center ring-2 ring-white">
-                            <span
-                                className="material-symbols-outlined text-[12px] text-white"
-                                style={{ fontVariationSettings: "'FILL' 1" }}
+                                // decrease size of icon
+                                className="material-symbols-outlined text-[12px] text-error"
+                                style={{ fontVariationSettings: "'FILL' 1, 'wght' 200" }}
                             >
                                 favorite
                             </span>
                         </div>
-                        <span className="pl-4 text-xs font-medium text-slate-500">
-                            {post.likeCount || 0}
+                        <span
+                            className="pl-3 text-xs font-medium text-slate-500 cursor-pointer hover:underline"
+                            onClick={openLikeList}
+                        >
+                            {localReactionCount || 0}
                         </span>
                     </div>
                     <span className="text-xs font-medium text-slate-500">
                         {post.commentCount || 0} bình luận • 0 chia sẻ
                     </span>
                 </div>
-                <div className="flex items-center justify-between pt-4">
-                    <button className="cursor-pointer flex-1 flex items-center justify-center gap-2 py-2 rounded-full hover:bg-primary/5 text-primary transition-colors font-bold text-sm">
-                        <span className="material-symbols-outlined">thumb_up</span> Thích
+                <div className="flex items-center justify-between pt-2">
+                    <button
+                        className={`cursor-pointer flex-1 flex items-center justify-center gap-2 py-2 rounded-full transition-colors font-bold text-sm ${localReactedByMe ? 'text-error hover:bg-primary/10' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                        onClick={handleToggleLike}
+                    >
+                        <span className="material-symbols-outlined" style={localReactedByMe ? { fontVariationSettings: "'FILL' 1" } : {}}>favorite</span> Thích
                     </button>
                     <button
                         className="cursor-pointer flex-1 flex items-center justify-center gap-2 py-2 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors font-bold text-sm"
@@ -143,6 +180,13 @@ const FeedPost = ({ post, onCommentClick, onImageClick, isOwner, onDelete }) => 
                     </button>
                 </div>
             </div>
+
+            <LikeListPopup
+                isOpen={isLikeListOpen}
+                onClose={() => setIsLikeListOpen(false)}
+                targetId={post.id}
+                targetType="POST"
+            />
         </article>
     );
 };
