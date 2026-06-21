@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { timeAgo } from '@/utils/timeAgo';
 import { getDefaultAvatarUrl } from '@/utils/avatarUtils';
 import commentService from '@/services/commentService';
 import PostImages from '@/components/feed/PostImages';
 import MediaCarouselViewer from '@/components/MediaCarouselViewer';
+import LikeListPopup from '@/components/common/LikeListPopup';
+import reactionService from '@/services/reactionService';
 
 const PopupCommentItem = ({ comment, depth = 0, activeDropdown, setActiveDropdown, onReply, onDelete, children, postAuthorId }) => {
     const [repliesOpen, setRepliesOpen] = useState(false);
@@ -16,6 +18,32 @@ const PopupCommentItem = ({ comment, depth = 0, activeDropdown, setActiveDropdow
     const [loadingReplies, setLoadingReplies] = useState(false);
     const [viewerOpen, setViewerOpen] = useState(false);
     const [viewerIndex, setViewerIndex] = useState(0);
+    const [isLikeListOpen, setIsLikeListOpen] = useState(false);
+
+    const [localReactedByMe, setLocalReactedByMe] = useState(comment.reactedByMe);
+    const [localReactionCount, setLocalReactionCount] = useState(comment.reactionCount || 0);
+
+    useEffect(() => {
+        setLocalReactedByMe(comment.reactedByMe);
+        setLocalReactionCount(comment.reactionCount || 0);
+    }, [comment.reactedByMe, comment.reactionCount]);
+
+    const handleToggleLike = async () => {
+        const previousState = localReactedByMe;
+        const previousCount = localReactionCount;
+
+        // Optimistic update
+        setLocalReactedByMe(!previousState);
+        setLocalReactionCount(previousState ? Math.max(0, previousCount - 1) : previousCount + 1);
+
+        try {
+            await reactionService.toggleReaction(comment.id, 'COMMENT');
+        } catch (err) {
+            // Revert on error
+            setLocalReactedByMe(previousState);
+            setLocalReactionCount(previousCount);
+        }
+    };
 
     const handleMediaClick = (index) => {
         setViewerIndex(index);
@@ -85,19 +113,42 @@ const PopupCommentItem = ({ comment, depth = 0, activeDropdown, setActiveDropdow
                     )}
                 </div>
 
-                <div className="flex gap-4 mt-2 px-2">
-                    <button className="cursor-pointer text-[10px] font-bold text-on-surface-variant uppercase tracking-wider hover:text-primary transition-colors">Thích</button>
+                <div className="flex gap-2 mt-2 items-center">
+                    <span className="text-[10px] font-medium text-outline">{timeAgo(comment.createdAt)}</span>
+                    <div className="flex items-center gap-1.5">
+                        <button
+                            className={`cursor-pointer text-[10px] font-bold tracking-wider transition-colors ${localReactedByMe ? 'text-error' : 'text-on-surface-variant hover:underline'}`}
+                            onClick={handleToggleLike}
+                        >
+                            Thích
+                        </button>
+                        {localReactionCount > 0 && (
+                            <div
+                                className="flex items-center gap-1 cursor-pointer px-1 py-0.5 rounded transition-colors"
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsLikeListOpen(true);
+                                }}
+                            >
+                                <div className="w-[14px] h-[14px] rounded-full bg-white flex items-center justify-center ring-1 ring-white">
+                                    <span className="material-symbols-outlined text-[8px] text-error" style={{ fontVariationSettings: "'FILL' 1, 'wght' 200" }}>favorite</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-slate-500 hover:underline text-on-surface-variant">
+                                    {localReactionCount}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <button
-                        className="cursor-pointer text-[10px] font-bold text-on-surface-variant uppercase tracking-wider hover:text-primary transition-colors"
+                        className="cursor-pointer text-[10px] font-bold text-on-surface-variant tracking-wider hover:underline transition-colors"
                         onClick={handleReply}
                     >
-                        Phản hồi
+                        Trả lời
                     </button>
-                    <span className="text-[10px] font-medium text-outline">{timeAgo(comment.createdAt)}</span>
 
                     {canDelete && (
                         <button
-                            className="cursor-pointer text-[10px] font-bold text-error uppercase tracking-wider hover:text-error-dim transition-colors"
+                            className="cursor-pointer text-[10px] font-bold text-error tracking-wider hover:underline transition-colors"
                             onClick={() => onDelete && onDelete(comment.id)}
                         >
                             Xóa
@@ -143,6 +194,13 @@ const PopupCommentItem = ({ comment, depth = 0, activeDropdown, setActiveDropdow
                 )}
                 {children}
             </div>
+
+            <LikeListPopup
+                isOpen={isLikeListOpen}
+                onClose={() => setIsLikeListOpen(false)}
+                targetId={comment.id}
+                targetType="COMMENT"
+            />
         </div>
     );
 };

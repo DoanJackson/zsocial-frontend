@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import commentService from '@/services/commentService';
-import PostDetailHeader from './PostDetailHeader';
+import reactionService from '@/services/reactionService';
 import PostDetailBody from './PostDetailBody';
 import PostDetailMedia from './PostDetailMedia';
 import PostDetailStats from './PostDetailStats';
@@ -10,6 +10,9 @@ import PostDetailCommentList from './PostDetailCommentList';
 import PopupCommentItem from './PopupCommentItem';
 import PopupCommentInput from './PopupCommentInput';
 import ConfirmDialog from '@/components/ConfirmDialog';
+import LikeListPopup from '@/components/common/LikeListPopup';
+import PostDetailHeader from './PostDetailHeader';
+import { toast } from 'react-toastify';
 
 const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }) => {
     const navigate = useNavigate();
@@ -19,6 +22,33 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
     const [replyingTo, setReplyingTo] = useState(null);
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
     const [commentToDelete, setCommentToDelete] = useState(null);
+
+    const [localReactedByMe, setLocalReactedByMe] = useState(false);
+    const [localReactionCount, setLocalReactionCount] = useState(0);
+    const [isLikeListOpen, setIsLikeListOpen] = useState(false);
+
+    useEffect(() => {
+        if (post) {
+            setLocalReactedByMe(post.reactedByMe);
+            setLocalReactionCount(post.reactionCount || 0);
+        }
+    }, [post]);
+
+    const handleToggleLike = async () => {
+        if (!post) return;
+        const previousState = localReactedByMe;
+        const previousCount = localReactionCount;
+
+        setLocalReactedByMe(!previousState);
+        setLocalReactionCount(previousState ? Math.max(0, previousCount - 1) : previousCount + 1);
+
+        try {
+            await reactionService.toggleReaction(post.id, 'POST');
+        } catch (err) {
+            setLocalReactedByMe(previousState);
+            setLocalReactionCount(previousCount);
+        }
+    };
 
     const goToProfile = () => {
         if (post?.author?.userId) {
@@ -37,7 +67,7 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
         return () => document.removeEventListener('click', handleClickOutside);
     }, []);
 
-    const fetchedForPostRef = React.useRef(null);
+    const fetchedForPostRef = useRef(null);
 
     const fetchComments = async () => {
         if (!post) return;
@@ -99,6 +129,15 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
         }
     };
 
+    const handleShare = () => {
+        try {
+            navigator.clipboard.writeText(`${window.location.origin}/post/${post.id}`);
+            toast.success("Đã sao chép liên kết!");
+        } catch (err) {
+            toast.error("Không thể sao chép liên kết");
+        }
+    };
+
     if (!post || !isOpen) return null;
 
     return (
@@ -119,11 +158,17 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
                         onImageClick={(index) => onImageClick && onImageClick(post, index)}
                     />
                     <PostDetailStats
-                        likeCount={post.likeCount}
+                        reactionCount={localReactionCount}
                         commentCount={post.commentCount || comments.length}
-                        shareCount={post.shareCount}
+                        onLikesClick={() => {
+                            if (localReactionCount > 0) setIsLikeListOpen(true);
+                        }}
                     />
-                    <PostDetailActions />
+                    <PostDetailActions
+                        reactedByMe={localReactedByMe}
+                        onToggleLike={handleToggleLike}
+                        handleShare={handleShare}
+                    />
 
                     <PostDetailCommentList>
                         {loadingComments ? (
@@ -179,6 +224,13 @@ const PostDetailModal = ({ isOpen, onClose, post, onImageClick, onCommentAdded }
                     setConfirmDeleteOpen(false);
                     setCommentToDelete(null);
                 }}
+            />
+
+            <LikeListPopup
+                isOpen={isLikeListOpen}
+                onClose={() => setIsLikeListOpen(false)}
+                targetId={post?.id}
+                targetType="POST"
             />
         </div>
     );
